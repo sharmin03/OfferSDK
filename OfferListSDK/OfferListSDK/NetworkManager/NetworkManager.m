@@ -9,53 +9,64 @@
 #import <UIKit/UIKit.h>
 #import "Offer.h"
 #import <AdSupport/ASIdentifierManager.h>
-//#import <NSHash/NSString+NSHash.h>
-//#import <NSHash/NSData+NSHash.h>
 #import <CommonCrypto/CommonDigest.h>
 
 @implementation NetworkManager
+
+NSString *baseUrl;
+NSString *ip;
+NSString *locale;
+NSString *timestamp;
+NSString *offerTypes;
+NSString *version;
+NSString *apple_idfa;
+NSString *idfaEnabled;
+NSString *apiKey;
+NSString *gatheredParameters;
+NSString *hashKey;
+NSString *url;
 
 - (instancetype)init
 {
     self = [super init];
     if (self) {
         // Initializing the static query parameters
-        self.baseUrl = @"https://api.fyber.com/feed/v1/offers.json?";
-        self.ip = [NSString stringWithFormat:@"%s%s", "&ip=", "109.235.143.113"];
-        self.locale = [NSString stringWithFormat:@"%s%s", "&locale=", "de"];
-        self.timestamp = [NSString stringWithFormat:@"%s%@", "&timestamp=", [NSString stringWithFormat:@"%lu", (long)[[NSNumber numberWithDouble:[[NSDate date] timeIntervalSince1970]] integerValue]]];
-        self.offerTypes = [NSString stringWithFormat:@"%s%s", "&offer_types=", "112"];
-        self.version = [NSString stringWithFormat:@"%s%@", "&phone_version=", [[UIDevice currentDevice] systemVersion]];
-        self.apple_idfa = [NSString stringWithFormat:@"%s%@", "&apple_idfa=", [[[ASIdentifierManager sharedManager] advertisingIdentifier] UUIDString]];
-        self.idfaEnabled = [NSString stringWithFormat:@"%s%s", "&apple_idfa_tracking_enabled=", "true"];
+        baseUrl = @"https://api.fyber.com/feed/v1/offers.json?";
+        ip = [NSString stringWithFormat:@"%s%s", "&ip=", "109.235.143.113"];
+        locale = [NSString stringWithFormat:@"%s%s", "&locale=", "de"];
+        timestamp = [NSString stringWithFormat:@"%s%@", "&timestamp=", [NSString stringWithFormat:@"%lu", (long)[[NSNumber numberWithDouble:[[NSDate date] timeIntervalSince1970]] integerValue]]];
+        offerTypes = [NSString stringWithFormat:@"%s%s", "&offer_types=", "112"];
+        version = [NSString stringWithFormat:@"%s%@", "&phone_version=", [[UIDevice currentDevice] systemVersion]];
+        apple_idfa = [NSString stringWithFormat:@"%s%@", "&apple_idfa=", [[[ASIdentifierManager sharedManager] advertisingIdentifier] UUIDString]];
+        idfaEnabled = [NSString stringWithFormat:@"%s%s", "&apple_idfa_tracking_enabled=", "true"];
     }
     return self;
 }
 
 
--(void) loadData:(NSString *)aID userID:(NSString *) uId token:(NSString *) token completionHandler: (void (^)(NSArray<Offer *> * offers)) completionHandler {
+-(void) loadOffers:(NSString *)appID userID:(NSString *) userId token:(NSString *) token completionHandler: (void (^)(NSArray<Offer *> * offers)) completionHandler {
     
     // getting all the request parameters in correct form
     NSMutableArray<Offer *> *offers = NSMutableArray.new;
-    self.appId = [NSString stringWithFormat:@"%s%@", "appid=", aID];
-    self.userId = [NSString stringWithFormat:@"%s%@", "&uid=", uId];
+    self.appId = [NSString stringWithFormat:@"%s%@", "appid=", appID];
+    self.userId = [NSString stringWithFormat:@"%s%@", "&uid=", userId];
     self.securityToken = [NSString stringWithFormat:@"%@", token];
-    self.apiKey = [NSString stringWithFormat:@"%@", token];
+    apiKey = [NSString stringWithFormat:@"%@", token];
     
     // Gathering the parameters in alphabetical order to calculate the hask key
-    self.gatheredParameters = [NSString stringWithFormat:@"%@%@%@%@%@%@%@%@%@%@", self.appId, self.apple_idfa, self.idfaEnabled, self.ip, self.locale, self.offerTypes, self.version, self.timestamp, self.userId, self.apiKey ];
+    gatheredParameters = [NSString stringWithFormat:@"%@%@%@%@%@%@%@%@%@%@", self.appId, apple_idfa, idfaEnabled, ip, locale, offerTypes, version, timestamp, self.userId, apiKey ];
     
     //Calculating the Hash key
 //    self.hashKey = [NSString stringWithFormat:@"%s%@", "&hashkey=", [self.gatheredParameters SHA1]];
-    self.hashKey = [NSString stringWithFormat:@"%s%@", "&hashkey=", [self returnHashWithSHA1:self.gatheredParameters]];
+    hashKey = [NSString stringWithFormat:@"%s%@", "&hashkey=", [self returnHashWithSHA1:gatheredParameters]];
     
     //Creating a url with all the paramters after hash key calculation
-    self.url = [NSString stringWithFormat:@"%@%@%@%@%@%@%@%@%@%@%@", self.baseUrl, self.appId, self.userId, self.ip, self.locale, self.timestamp, self.offerTypes, self.version, self.apple_idfa, self.idfaEnabled, self.hashKey ];
+    url = [NSString stringWithFormat:@"%@%@%@%@%@%@%@%@%@%@%@", baseUrl, self.appId, self.userId, ip, locale, timestamp, offerTypes, version, apple_idfa, idfaEnabled, hashKey ];
 
     // HTTP get request
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] init];
     [request setHTTPMethod:@"GET"];
-    [request setURL:[NSURL URLWithString:self.url]];
+    [request setURL:[NSURL URLWithString:url]];
     
     [[[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:
       ^(NSData * _Nullable data,
@@ -73,8 +84,9 @@
         NSString *responseBodyWithApiKey = [NSString stringWithFormat:@"%@%@", str, @"1c915e3b5d42d05136185030892fbb846c278927"];
         
         //Hashing the responseBodyWithApiKey with SHA1 becuase it is the expectedSignature
-//        NSString *expectedSignature = [responseBodyWithApiKey SHA1];
-    
+        NSString *expectedSignature = [self returnHashWithSHA1:responseBodyWithApiKey];
+        NSLog(@"response = %@", responseSignature);
+        NSLog(@"expected = %@", expectedSignature);
         // Comparing the response signature with the calculated expected signature to check if the data is corrupted or not.
 //        if ([responseSignature isEqualToString:expectedSignature]) {
 //        if(YES) {
@@ -90,8 +102,8 @@
         
         if (err) {
             NSLog(@"Failed to serialoze JSON: %@",err);
-            NSArray<Offer *> *empty = [NSArray new];
-            completionHandler(empty);
+//            NSArray<Offer *> *empty = [NSArray new];
+            completionHandler(nil,err);
             return;
         }
 

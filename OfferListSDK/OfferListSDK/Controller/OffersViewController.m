@@ -20,7 +20,7 @@ NSString *cellIdentifier = @"CellIdentifier";
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
-    self.navigationItem.title = @"Offers";
+    self.navigationItem.title = @"Offer Wall";
     self.tableView.tableFooterView = UITableView.new;
     [self.tableView registerClass:UITableViewCell.class forCellReuseIdentifier:cellIdentifier];
     [self.tableView reloadData];

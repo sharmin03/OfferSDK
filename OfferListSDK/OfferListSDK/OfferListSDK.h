@@ -6,6 +6,9 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "OffersViewController.h"
+#import "Offer.h"
+#import "NetworkManager.h"
 
 //! Project version number for OfferListSDK.
 FOUNDATION_EXPORT double OfferListSDKVersionNumber;
